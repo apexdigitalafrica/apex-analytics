@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APEX Analytics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { background: white; border-radius: 10px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header h1 { color: #333; font-size: 2.5em; }
+        .header p { color: #666; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .metric-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center; }
+        .metric-card h3 { color: #667eea; font-size: 0.9em; text-transform: uppercase; margin-bottom: 10px; }
+        .metric-card .value { color: #333; font-size: 2.5em; font-weight: bold; }
+        .metric-card .label { color: #999; font-size: 0.9em; margin-top: 5px; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .chart-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .chart-card h3 { color: #333; margin-bottom: 15px; }
+        .table-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 30px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; color: #333; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9fa; }
+        .tier-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+        .tier-hottest { background: #ff6b6b; color: white; }
+        .tier-warm { background: #ffa94d; color: white; }
+        .tier-qualified { background: #4ecdc4; color: white; }
+        .tier-nurture { background: #95a5a6; color: white; }
+        .intent-badge { display: inline-block; padding: 5px 12px; border-radius: 5px; font-size: 0.85em; background: #e3f2fd; color: #1976d2; }
+        .loading { text-align: center; color: white; font-size: 1.2em; }
+        .error { background: #ff6b6b; color: white; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .timestamp { color: #999; font-size: 0.9em; text-align: right; margin-top: 20px; }
+        @media (max-width: 768px) { .header h1 { font-size: 1.8em; } .charts-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 APEX Analytics</h1>
+            <p>Real-time insights into your WhatsApp leads and bookings</p>
+        </div>
+        <div id="content"><div class="loading">Loading analytics...</div></div>
+    </div>
+    <script>
+        async function load() {
+            try {
+                const r = await fetch('https://apex-ivr-system-4481.twil.io/api/analytics').then(r => r.json()).catch(() => ({ totalLeads: 0, totalBookings: 0, completionRate: 0, byTier: {}, byIntent: {}, byCountry: {}, recentBookings: [] }));
+                render(r);
+            } catch (e) {
+                document.getElementById('content').innerHTML = `<div class="error">Error: ${e.message}</div>`;
+            }
+        }
+        function render(d) {
+            let h = `<div class="metrics-grid"><div class="metric-card"><h3>📱 Total Leads</h3><div class="value">${d.totalLeads||0}</div></div><div class="metric-card"><h3>📅 Bookings</h3><div class="value">${d.totalBookings||0}</div></div><div class="metric-card"><h3>✅ Completion</h3><div class="value">${d.completionRate||0}%</div></div></div><div class="charts-grid"><div class="chart-card"><h3>Tier Distribution</h3><canvas id="tc"></canvas></div><div class="chart-card"><h3>Intent</h3><canvas id="ic"></canvas></div><div class="chart-card"><h3>Geography</h3><canvas id="gc"></canvas></div></div><div class="table-card"><h3>📋 Recent Bookings</h3><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Intent</th><th>Tier</th><th>Date</th></tr></thead><tbody>`;
+            (d.recentBookings||[]).slice(0,10).forEach(b => {
+                h += `<tr><td>${b.name||'N/A'}</td><td>${b.email||'N/A'}</td><td>${b.phone||'N/A'}</td><td><span class="intent-badge">${b.intent||'N/A'}</span></td><td><span class="tier-badge tier-${(b.tier||'nurture').toLowerCase()}">${b.tier||'NURTURE'}</span></td><td>${new Date(b.timestamp).toLocaleDateString()}</td></tr>`;
+            });
+            h += `</tbody></table></div><div class="timestamp">Updated: ${new Date().toLocaleString()}</div>`;
+            document.getElementById('content').innerHTML = h;
+            setTimeout(() => {
+                new Chart(document.getElementById('tc'), {type:'doughnut', data:{labels:['HOTTEST','WARM','QUALIFIED','NURTURE'], datasets:[{data:[d.byTier.HOTTEST||0, d.byTier.WARM||0, d.byTier.QUALIFIED||0, d.byTier.NURTURE||0], backgroundColor:['#ff6b6b','#ffa94d','#4ecdc4','#95a5a6']}]}, options:{responsive:true}});
+                new Chart(document.getElementById('ic'), {type:'bar', data:{labels:['SAAS','ECOM','AUDIT','GENERAL'], datasets:[{label:'Count', data:[d.byIntent.SAAS||0, d.byIntent.ECOM||0, d.byIntent.AUDIT||0, d.byIntent.GENERAL||0], backgroundColor:'#667eea'}]}, options:{responsive:true, indexAxis:'y'}});
+                new Chart(document.getElementById('gc'), {type:'bar', data:{labels:Object.keys(d.byCountry||{}).slice(0,5), datasets:[{label:'Leads', data:Object.values(d.byCountry||{}).slice(0,5), backgroundColor:'#764ba2'}]}, options:{responsive:true}});
+            }, 100);
+        }
+        load();
+        setInterval(load, 30000);
+    </script>
+</body>
+</html>
