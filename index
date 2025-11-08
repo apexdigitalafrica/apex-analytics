@@ -48,7 +48,7 @@
     <script>
         async function load() {
             try {
-                const r = await fetch('const r=await fetch('https://apex-ivr-system-4481.twil.io/api/analytics').then(r => r.json()).catch(() => ({ totalLeads: 0, totalBookings: 0, completionRate: 0, byTier: {}, byIntent: {}, byCountry: {}, recentBookings: [] }));
+                const r=await fetch('https://apex-ivr-system-4481.twil.io/api/analytics').then(r => r.json()).catch(() => ({ totalLeads: 0, totalBookings: 0, completionRate: 0, byTier: {}, byIntent: {}, byCountry: {}, recentBookings: [] }));
                 render(r);
             } catch (e) {
                 document.getElementById('content').innerHTML = `<div class="error">Error: ${e.message}</div>`;
